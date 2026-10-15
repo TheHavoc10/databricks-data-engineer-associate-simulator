@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Databricks Prep">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <title>Databricks Associate · Simulador de certificación</title>
 <style>
 :root{--bg:#f4f6f5;--card:#fff;--card2:#f8faf9;--txt:#192a32;--muted:#64757c;--line:#dde5e6;--brand:#ff4839;--brand-hover:#ed382b;--navy:#122b33;--green:#19835b;--greenbg:#eaf8f0;--red:#be4146;--redbg:#fff0f0;--yellow:#956112;--yellowbg:#fff6e3;--shadow:0 15px 50px rgba(18,43,51,.07)}
@@ -147,12 +147,14 @@ input,textarea,select{accent-color:var(--brand)}
 @media(max-width:370px){.mobile-answer-dock .btn{font-size:11px}.sidebar-tools .nav-label{font-size:9px}.question-head .pill{font-size:9px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*:before,*:after{transition:none!important;animation:none!important}}
 </style>
+<link rel="stylesheet" href="./theme.css?v=1">
+<script src="./theme.js?v=1"></script>
 </head>
 <body>
 <a href="#main" class="skip-link">Saltar al contenido</a>
 <div class="app">
 <aside aria-label="Navegación">
-  <div class="identity"><div class="logo">D</div><div><strong>Databricks Prep</strong><small>Data Engineer Associate</small></div></div>
+  <div class="identity"><div class="logo">D</div><div><strong>Databricks Prep</strong><small>Data Engineer Associate</small></div><button id="themeToggle" type="button" class="theme-toggle" aria-label="Cambiar apariencia"><span class="theme-symbol" aria-hidden="true">◐</span><span class="theme-label">Automático</span></button></div>
   <div class="sep"></div>
   <div><div class="aside-label">Tu espacio</div><nav class="sidebar-tools" id="nav"></nav></div>
   <div class="sep"></div>
