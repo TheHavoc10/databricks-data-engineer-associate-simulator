@@ -146,6 +146,52 @@ input,textarea,select{accent-color:var(--brand)}
 }
 @media(max-width:370px){.mobile-answer-dock .btn{font-size:11px}.sidebar-tools .nav-label{font-size:9px}.question-head .pill{font-size:9px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* Barra de estudio condensada: Safari móvil, una única franja fija */
+.mobile-menu{display:none}
+@media(max-width:900px){
+ aside{display:flex!important;align-items:center;justify-content:space-between;gap:8px;position:relative;z-index:40;flex-direction:row!important;max-height:none!important;overflow:visible!important}
+ aside > div:not(.identity){display:none!important}
+ aside .identity{display:flex!important;flex:1;min-width:0;gap:8px;margin:0!important}
+ aside .identity > div:nth-child(2){min-width:0;flex:1}
+ aside .identity strong{font-size:14px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+ aside .identity small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ aside .logo{flex:none;width:36px;height:36px}
+ aside .theme-toggle{min-width:42px;width:42px;min-height:42px;height:42px;padding:6px;flex:none;margin-left:0}
+ aside .theme-label{display:none!important}
+ .app .sidebar-tools{display:none!important}
+ .mobile-menu{display:block;flex:none;position:relative}
+ .mobile-menu summary{list-style:none;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);border-radius:12px;min-width:44px;height:44px;padding:0 11px;font-size:18px;font-weight:700;color:var(--txt);background:var(--card);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+ .mobile-menu summary::-webkit-details-marker{display:none}
+ .mobile-menu summary span{font-size:12px}
+ .mobile-menu[open] summary{border-color:var(--brand)}
+ .mobile-nav{position:absolute;right:0;top:calc(100% + 10px);width:min(250px,calc(100vw - 24px));display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);background:var(--card);box-shadow:0 12px 36px rgba(0,0,0,.17);border-radius:15px;padding:8px;z-index:90}
+ .mobile-nav .side-button{display:flex!important;flex-direction:row!important;gap:11px;align-items:center;justify-content:flex-start;min-height:45px;width:100%;padding:9px 11px;border-radius:10px;background:transparent;color:var(--txt);font-size:13px;text-align:left}
+ .mobile-nav .nav-icon{display:inline-flex;justify-content:center;align-items:center;width:23px;font-size:20px;flex:none}
+ .mobile-nav .nav-label{font-size:13px}
+ .mobile-nav .side-button.active{background:var(--card2);color:var(--brand);border-color:var(--line)}
+ html[data-effective-theme="dark"] .mobile-nav .side-button{color:var(--txt)}
+ html[data-effective-theme="dark"] .mobile-nav .side-button.active{background:#3a2a2c;color:#ffafa5}
+ .mobile-answer-dock{position:fixed;display:flex!important;flex-direction:column;bottom:0;left:0;right:0;gap:6px;z-index:45;align-items:stretch;padding:9px max(12px,env(safe-area-inset-right,0px)) calc(9px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:rgba(255,255,255,.98);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 -7px 22px rgba(0,0,0,.07)}
+ .dock-info{display:flex;align-items:center;gap:12px;min-height:14px;width:100%}
+ .dock-counter{font-size:11px;font-weight:750;color:var(--muted);white-space:nowrap;line-height:1.2}
+ .dock-progress{height:4px;background:var(--line);border-radius:999px;overflow:hidden;flex:1}
+ .dock-progress-fill{height:100%;display:block;border-radius:999px;background:var(--brand);transition:width .2s ease}
+ .dock-buttons{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr);gap:7px;width:100%}
+ .dock-buttons .btn{width:100%;min-width:0;min-height:44px;padding:9px 4px;font-size:12px;line-height:1.2;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .dock-buttons .btn:disabled{opacity:.58}
+ body:has(.mobile-answer-dock) main{padding-bottom:calc(116px + env(safe-area-inset-bottom,0px))}
+ .modal-scrim{z-index:120}
+ .toast{z-index:130;bottom:calc(99px + env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:380px){
+ .mobile-menu summary span{display:none}
+ .mobile-menu summary{padding:0 9px}
+ .dock-buttons{gap:5px}
+ .dock-buttons .btn{font-size:11px;min-height:44px}
+ .dock-counter{font-size:10px}
+}
+
 </style>
 <link rel="stylesheet" href="./theme.css?v=1">
 <script src="./theme.js?v=1"></script>
@@ -155,6 +201,7 @@ input,textarea,select{accent-color:var(--brand)}
 <div class="app">
 <aside aria-label="Navegación">
   <div class="identity"><div class="logo">D</div><div><strong>Databricks Prep</strong><small>Data Engineer Associate</small></div><button id="themeToggle" type="button" class="theme-toggle" aria-label="Cambiar apariencia"><span class="theme-symbol" aria-hidden="true">◐</span><span class="theme-label">Automático</span></button></div>
+  <details class="mobile-menu" id="mobileMenu"><summary aria-label="Abrir menú de secciones" title="Menú">☰ <span>Menú</span></summary><nav id="mobile-nav" class="mobile-nav" aria-label="Navegación del simulador"></nav></details>
   <div class="sep"></div>
   <div><div class="aside-label">Tu espacio</div><nav class="sidebar-tools" id="nav"></nav></div>
   <div class="sep"></div>
@@ -185,7 +232,7 @@ function makePanel(cls='padded'){return el('section','panel '+cls)}
 function current(){let s=app.session;return s&&BY_ID.get(s.ids[s.pos])}
 function allHistory(){let a=Object.values(app.history||{});return {attempts:a.reduce((n,x)=>n+x.attempts,0),correct:a.reduce((n,x)=>n+x.correct,0),wrong:a.reduce((n,x)=>n+x.wrong,0),seen:a.filter(x=>x.attempts>0).length}}
 function go(p){page=p;save();draw();window.scrollTo({top:0,behavior:'smooth'})}
-function nav(){const n=$('#nav');n.replaceChildren();[['home','⌂','Inicio'],['practice','◇','Simulador'],['errors','↻','Repasar'],['stats','▥','Estadísticas']].forEach(([key,glyph,label])=>{const b=btn('',()=>go(key),'side-button'+(page===key?' active':''));b.append(el('span','nav-icon',glyph),el('span','nav-label',label));b.setAttribute('aria-label',label);if(page===key)b.setAttribute('aria-current','page');n.append(b)});const h=allHistory();const box=$('#sidebar-stats');box.replaceChildren();let s=el('div','side-stats');for(const [num,label] of [[h.seen,'Vistas'],[h.attempts?Math.round(h.correct/h.attempts*100)+'%':'—','Acierto global']]){let c=el('div','stat-small');c.append(el('strong','',num.toString()),el('span','',label));s.append(c)}box.append(s)}
+function nav(){const n=$('#nav'),m=$('#mobile-nav');n.replaceChildren();if(m)m.replaceChildren();[['home','⌂','Inicio'],['practice','◇','Simulador'],['errors','↻','Repasar'],['stats','▥','Estadísticas']].forEach(([key,glyph,label])=>{for(const target of [n,m].filter(Boolean)){const b=btn('',()=>{const menu=$('#mobileMenu');if(menu)menu.open=false;go(key)},'side-button'+(page===key?' active':''));b.append(el('span','nav-icon',glyph),el('span','nav-label',label));b.setAttribute('aria-label',label);if(page===key)b.setAttribute('aria-current','page');target.append(b)}});const h=allHistory();const box=$('#sidebar-stats');box.replaceChildren();let s=el('div','side-stats');for(const [num,label] of [[h.seen,'Vistas'],[h.attempts?Math.round(h.correct/h.attempts*100)+'%':'—','Acierto global']]){let c=el('div','stat-small');c.append(el('strong','',num.toString()),el('span','',label));s.append(c)}box.append(s)}
 function topStats(parent){const h=allHistory(),known=QUESTIONS.filter(mastered).length,review=QUESTIONS.filter(due).length;const list=[[QUESTIONS.length,'Banco completo'],[known,'Dominadas'],[review,'Para repasar hoy'],[h.attempts?Math.round(h.correct/h.attempts*100)+'%':'—','Precisión histórica']];const row=el('div','top-metrics');for(const [val,name] of list){let c=el('div','metric-card');c.append(el('span','',name),el('strong','',String(val)));row.append(c)}parent.append(row)}
 function tag(str,cls=''){return el('span','pill '+cls,str)}
 function issuesList(parent){let all=QUESTIONS.filter(q=>q.issue);parent.append(el('h3','minititle','Preguntas con observaciones técnicas'));parent.append(el('p','small muted','La corrección sigue fielmente el PDF de respuestas. Estos avisos señalan posibles errores, ambigüedades o cambios de versión; no modifican la clave del documento.'));let wrap=el('div','issue-list');for(const q of all){let card=el('div','issue-card');card.append(el('strong','',`Pregunta ${q.id} · clave del PDF: ${q.correct.join(', ')}`),el('div','',q.issue));let jump=btn('Abrir pregunta',()=>{let ids=[q.id];app.session={ids,mode:'practice',kind:'reviewIssue',pos:0,answers:{},checks:{},finished:false,startedAt:Date.now()};go('practice')},'btn sm');jump.style.marginTop='9px';card.append(jump);wrap.append(card)}parent.append(wrap)}
@@ -303,13 +350,20 @@ function showQuestion(){const root=$('#root'),s=app.session;if(!s){root.append(h
  if(s.mode==='practice'&&!evaluated){let hint=el('p','small muted',q.correct.length>1?`Selecciona ${q.correct.length} opciones. Toca una ya seleccionada cuando estén todas marcadas para comprobar.`:'Un toque selecciona; otro toque sobre la misma opción comprueba.');hint.style.margin='10px 0 0';bar.append(hint);if(q.correct.length>1&&selected.length){let clr=btn('↺ Limpiar selección',clearCurrentSelection,'btn sm');clr.style.marginTop='8px';bar.append(clr)}}
  if(s.mode==='practice'&&evaluated){showFeedback(bar,q,s);bar.append(ratingButtons(q))}
  const actions=el('div','action-footer');let nav1=el('div','flex');nav1.append(btn('← Anterior',()=>move(index-1),'btn',{disabled:index===0}));nav1.append(btn(index===s.ids.length-1?'Terminar sesión':'Siguiente →',()=>{if(index===s.ids.length-1)finish();else move(index+1)},'btn dark'));actions.append(nav1);if(s.mode==='practice'&&!evaluated){actions.append(btn('Comprobar respuesta',checkCurrent,'btn primary',{disabled:selected.length!==q.correct.length}))}else if(s.mode==='exam'){actions.append(btn('Entregar examen',()=>finish(),'btn primary'))}bar.append(actions);root.append(bar);
- const dock=el('div','mobile-answer-dock');dock.setAttribute('aria-label','Acciones de pregunta');
- dock.append(btn('← Anterior',()=>move(index-1),'btn',{disabled:index===0}));
- dock.append(btn(index===s.ids.length-1?'Finalizar':'Siguiente →',()=>{if(index===s.ids.length-1)finish();else move(index+1)},'btn dark'));
- if(s.mode==='practice'&&!evaluated)dock.append(btn('Comprobar ✓',checkCurrent,'btn primary',{disabled:selected.length!==q.correct.length}));
- else if(s.mode==='exam')dock.append(btn('Entregar',()=>finish(),'btn primary'));
- else dock.append(btn('Ver explicación',()=>{explainOpen=!explainOpen;draw()},'btn'));
- root.append(dock);
+ const dock=el('div','mobile-answer-dock');dock.setAttribute('role','group');dock.setAttribute('aria-label','Controles de la pregunta');
+ const dh=el('div','dock-info');dh.append(el('span','dock-counter','Pregunta '+(index+1)+'/'+s.ids.length));
+ const track2=el('div','dock-progress');const prog2=el('span','dock-progress-fill');prog2.style.width=((index+1)/s.ids.length*100)+'%';track2.append(prog2);dh.append(track2);dock.append(dh);
+ const buttons=el('div','dock-buttons');
+ buttons.append(btn('‹ Anterior',()=>move(index-1),'btn',{disabled:index===0}));
+ if(s.mode==='exam'){
+   buttons.append(btn(app.bookmarks[q.id]?'★ Marcada':'☆ Marcar',()=>{app.bookmarks[q.id]=!app.bookmarks[q.id];save();draw()},'btn primary'));
+ }else if(!evaluated){
+   buttons.append(btn('Comprobar',checkCurrent,'btn primary',{disabled:selected.length!==q.correct.length}));
+ }else{
+   buttons.append(btn('✓ Comprobada',()=>{},'btn primary',{disabled:true}));
+ }
+ buttons.append(btn(index===s.ids.length-1?'Finalizar ›':'Siguiente ›',()=>{if(index===s.ids.length-1)finish();else move(index+1)},'btn',{disabled:false}));
+ dock.append(buttons);root.append(dock);
  let grid=makePanel('padded questions-wrapper');let gh=el('div','question-head');gh.append(el('h3','minititle','Navegador de preguntas'));gh.append(el('span','small muted','Toca un número para saltar'));grid.append(gh);addNumberGrid(grid,s);root.append(grid);root.append(el('p','footer-note','Atajos: 1–5 para marcar; ← y → para navegar. El progreso se guarda localmente cuando el navegador lo permite.'))}
 function showFeedback(box,q,s,force=false){
  let state=s.checks[q.id],correct=state==='correct',invalid=state==='invalid',unanswered=state==='unanswered';
