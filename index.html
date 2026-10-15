@@ -85,7 +85,7 @@ input,textarea,select{accent-color:var(--brand)}
 @media(max-width:900px){
  html{scroll-padding-top:14px}
  .app{display:block;min-height:100dvh}
- aside{position:relative;max-height:none;min-height:auto;height:auto;background:#fff;color:var(--txt);border-bottom:1px solid var(--line);padding:15px max(18px,env(safe-area-inset-left)) 14px;display:block;overflow:visible}
+ aside{position:relative;max-height:none;min-height:auto;height:auto;background:#fff;color:var(--txt);border-bottom:1px solid var(--line);padding:calc(15px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right)) 14px max(18px,env(safe-area-inset-left));display:block;overflow:visible}
  aside .identity{margin:0;padding:0;display:flex;gap:12px}
  aside .identity strong{font-size:15px;color:var(--navy)}
  aside .identity small{font-size:11px;color:#6f8790}
