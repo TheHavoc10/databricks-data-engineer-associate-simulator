@@ -50,7 +50,7 @@
 
 .answer-detail{border-left:4px solid #19835b}
 .alt-line{gap:13px}.alt-prompt{font-size:13px;line-height:1.5;font-weight:660;color:var(--text,#22313c);margin-top:6px;overflow-wrap:anywhere}.alt-content{flex:1;min-width:0}.alt-content p{margin:5px 0 7px;line-height:1.58;white-space:pre-line}.alt-good,.alt-bad{font-size:12px;font-weight:780}.alt-good{color:#19835b}.alt-bad{color:#b15344}.evidence-list{display:flex;flex-wrap:wrap;gap:3px 18px;margin-top:15px}.evidence-list a{margin:0}.explain p{line-height:1.6}
-</style>
+.share-url{width:100%;min-height:100px;resize:vertical;padding:11px;border:1px solid var(--line);border-radius:10px;background:#f8faf9;font:11px/1.5 monospace;color:var(--txt)}.share-modal{max-width:530px;max-height:90vh;overflow:auto}.share-modal h2{margin:0 0 12px}.share-modal p{font-size:13px;line-height:1.6;color:var(--muted)}.share-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}@media(max-width:560px){.share-actions{flex-direction:column}.share-actions .btn{width:100%}}</style>
 </head>
 <body>
 <a href="#main" class="skip-link">Saltar al contenido</a>
@@ -166,7 +166,7 @@ function startSetup(parent,compact=false){const box=makePanel('padded');box.appe
  let hint=el('p','small muted',app.settings.selection==='smart'?'Selecciona más preguntas de las áreas con menos aciertos y de las que has fallado, sin ocultar contenido nuevo.':app.settings.selection==='due'?'Usa el repaso basado en fechas y en la confianza que indiques tras cada respuesta.':'');if(hint.textContent)box.append(hint);
  let act=el('div','action-footer');act.append(btn('Empezar sesión →',()=>startSession(),'btn primary'));box.append(act);parent.append(box)}
 function home(){const root=$('#root');root.append(heading('Tu certificación, con método','Práctica inteligente, repaso espaciado y simulacros. Todo en este navegador, incluso sin conexión.','DATABRICKS PREP · V2'));topStats(root);
- let actions=el('div','home-quick');let quick=[["🎯 Práctica inteligente","Prioriza errores y temas menos dominados",()=>{app.settings.selection='smart';app.settings.mode='practice';startSession()}],["🧩 Estudiar por tema","Selecciona una materia y afianza conceptos",()=>{app.settings.selection='topic';app.settings.mode='practice';save();draw();document.querySelector('.study-ways')?.scrollIntoView({behavior:'smooth',block:'center'})}],["⏱ Simulacro 45 preguntas","90 minutos, corrección al entregar",()=>{app.settings.mode='exam';app.settings.selection='all';app.settings.count=45;startSession()}]];for(const [title,sub,click] of quick){let b=btn(title,click,'quick-card');b.append(el('span','small muted',sub));actions.append(b)}root.append(actions);
+ let actions=el('div','home-quick');let quick=[["🎯 Práctica inteligente","Prioriza errores y temas menos dominados",()=>{app.settings.selection='smart';app.settings.mode='practice';startSession()}],["🧩 Estudiar por tema","Selecciona una materia y afianza conceptos",()=>{app.settings.selection='topic';app.settings.mode='practice';save();draw();document.querySelector('.study-ways')?.scrollIntoView({behavior:'smooth',block:'center'})}],["⏱ Simulacro 45 preguntas","90 minutos, corrección al entregar",()=>{app.settings.mode='exam';app.settings.selection='all';app.settings.count=45;startSession()}]];for(const [title,sub,click] of quick){let b=btn(title,click,'quick-card');b.append(el('span','small muted',sub));actions.append(b)}root.append(actions);let sb=el('div','flex');sb.style.margin='0 0 19px';sb.append(btn('🔗 Compartir progreso',shareProgress,'btn primary'));root.append(sb);
  if(app.session){const box=makePanel('padded');box.append(el('h2','minititle',app.session.finished?'Tienes una sesión finalizada':'Retoma donde lo dejaste'),el('p','muted small',app.session.finished?'Puedes revisar resultados o empezar otra sesión.':`Pregunta ${app.session.pos+1} de ${app.session.ids.length} · ${app.session.mode==='exam'?'Examen':'Práctica'}`));box.append(btn(app.session.finished?'Ver resultados →':'Continuar sesión →',()=>go('practice'),'btn primary'));box.style.marginTop='15px';root.append(box)}let spacer=el('div','');spacer.style.height='17px';root.append(spacer);startSetup(root);let note=el('div','help-box');note.style.marginTop='17px';note.append(el('strong','','Sobre el banco de preguntas'),el('p','','280 preguntas evaluables, incluida la 12 ya corregida. Con «Evitar variantes repetidas», el banco queda en 250 enunciados distintos. Se admiten varias respuestas cuando procede. Las letras correctas proceden del solucionario; las explicaciones son didácticas e independientes y las preguntas dudosas están señaladas.'));root.append(note);if(!STORAGE_OK){let warn=el('div','result-notice warn');warn.append(el('strong','','Este navegador no permite guardar automáticamente'),el('p','','Puedes practicar, pero exporta tu progreso antes de cerrar la página.'));root.append(warn)}root.append(el('p','footer-note','Banco de estudio no oficial. Las explicaciones complementan el PDF con motivos técnicos por opción y fuentes de Databricks. Algunas preguntas reflejan versiones anteriores. No se envía información a ningún servidor.'))}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
 function startSession(which='all'){if(app.session&&!app.session.finished&&!confirm('Hay una sesión sin terminar. ¿Quieres sustituirla por una nueva?'))return;let arr=QUESTIONS.filter(q=>which!=='errors'||app.history[q.id]?.lastCorrect===false);let choice=which==='errors'?'errors':app.settings.selection;if(choice==='topic')arr=arr.filter(q=>q.category===app.settings.topic);if(choice==='due')arr=arr.filter(due);if(app.settings.unique)arr=noDuplicates(app.settings.random?shuffle(arr.slice()):arr);if(!arr.length){toast(choice==='due'?'No tienes repasos pendientes. Prueba la práctica inteligente.':'No hay preguntas disponibles para esta selección.');return}if(choice==='smart')arr.sort((a,b)=>weakScore(b)-weakScore(a));else if(app.settings.random)shuffle(arr);if(which!=='errors')arr=arr.slice(0,Number(app.settings.count)||45);let ids=arr.map(q=>q.id),mode=which==='errors'?'practice':app.settings.mode;app.session={ids,mode,kind:choice,pos:0,answers:{},checks:{},finished:false,startedAt:Date.now(),durationMs:mode==='exam'?ids.length*2*60*1000:null,historyRecorded:false};explainOpen=false;whyOpen=false;save();go('practice')}
@@ -243,11 +243,80 @@ function showSummary(){let r=$('#root'),s=app.session,c=sessionCounts(s);let ass
 function showReview(){const root=$('#root'),s=app.session;if(!s||!s.finished){go('practice');return}let q=current(),index=s.pos;root.append(heading(`Revisión: pregunta ${index+1} de ${s.ids.length}`,`Pregunta original #${q.id} · ${q.category}`,'RESULTADOS DEL SIMULACRO'));let panel=makePanel('padded');let b=el('div','question-title');b.append(renderRich(q.question));panel.append(b);let choices=el('div','option-grid');let selected=s.answers[q.id]||[];for(const o of q.options){let c='option'+(q.correct.includes(o.key)?' correct':selected.includes(o.key)?' wrong':'');let d=el('div',c);d.append(el('span','choice',o.key));let body=el('div','option-body');body.append(renderRich(o.text));d.append(body);choices.append(d)}panel.append(choices);showFeedback(panel,q,s,true);panel.append(ratingButtons(q));if(q.issue){let issue=el('div','result-notice warn');issue.append(el('strong','','Aviso de revisión'),el('p','',q.issue));panel.append(issue)}let row=el('div','action-footer');row.append(btn('← Anterior',()=>{s.pos=Math.max(0,index-1);explainOpen=false;whyOpen=false;save();draw()},'btn',{disabled:index===0}),btn(index===s.ids.length-1?'Volver al resumen':'Siguiente →',()=>{if(index===s.ids.length-1)go('practice');else{s.pos++;explainOpen=false;whyOpen=false;save();draw()}},'btn dark'));panel.append(row);root.append(panel)}
 function errorsPage(){let root=$('#root');root.append(heading('Repasar errores','Vuelve a intentarlo hasta consolidar lo que fallaste.'));let wrong=QUESTIONS.filter(q=>app.history[q.id]?.lastCorrect===false);let dueQs=QUESTIONS.filter(due);let box=makePanel('padded');box.append(el('h2','minititle',`${wrong.length} falladas en tu último intento`));box.append(el('p','small muted',`${dueQs.length} preguntas ya están programadas para repasar. Al acertar, desaparecen del listado de fallos; si aciertas por descarte, volverán pronto.`));let act=el('div','flex');act.append(btn('Repasar fallos →',()=>startSession('errors'),'btn primary',{disabled:!wrong.length}),btn('Repaso espaciado →',()=>{app.settings.selection='due';app.settings.mode='practice';startSession()},'btn',{disabled:!dueQs.length}));box.append(act);if(wrong.length){box.append(el('p','caps','Preguntas originales'));let list=el('div','flex');for(const q of wrong){let b=btn('#'+q.id,()=>{let ids=wrong.map(x=>x.id);app.session={ids,mode:'practice',kind:'errors',pos:ids.indexOf(q.id),answers:{},checks:{},finished:false,startedAt:Date.now()};go('practice')},'btn sm');list.append(b)}box.append(list)}root.append(box)}
 function statsPage(){let root=$('#root'),h=allHistory();root.append(heading('Tu evolución','Histórico de sesiones, confianza y rendimiento por área.'));topStats(root);
- let wrap=makePanel('padded');wrap.append(el('h2','minititle','Progreso de estudio'));let first=QUESTIONS.filter(q=>app.history[q.id]?.firstCorrect===true).length,attempted=QUESTIONS.filter(q=>app.history[q.id]?.attempts>0).length;wrap.append(el('p','small muted',`${h.correct} aciertos y ${h.wrong} fallos en ${h.attempts} intentos. Aciertos a la primera: ${first} de ${attempted} preguntas vistas (${attempted?Math.round(first/attempted*100):0} %).`));let prog=el('div','progress-track');let fill=el('div','progress-fill');fill.style.width=(h.seen/QUESTIONS.length*100)+'%';prog.append(fill);wrap.append(prog);wrap.append(el('p','small muted',`${h.seen} de ${QUESTIONS.length} preguntas vistas · ${QUESTIONS.filter(mastered).length} dominadas · ${QUESTIONS.filter(due).length} pendientes de repaso.`));let line=el('div','action-footer');line.append(btn('Exportar progreso',exportData,'btn'),btn('Importar progreso',()=>$('#importFile').click(),'btn'),btn('Borrar historial',resetData,'btn outline-red'));wrap.append(line);root.append(wrap);
+ let wrap=makePanel('padded');wrap.append(el('h2','minititle','Progreso de estudio'));let first=QUESTIONS.filter(q=>app.history[q.id]?.firstCorrect===true).length,attempted=QUESTIONS.filter(q=>app.history[q.id]?.attempts>0).length;wrap.append(el('p','small muted',`${h.correct} aciertos y ${h.wrong} fallos en ${h.attempts} intentos. Aciertos a la primera: ${first} de ${attempted} preguntas vistas (${attempted?Math.round(first/attempted*100):0} %).`));let prog=el('div','progress-track');let fill=el('div','progress-fill');fill.style.width=(h.seen/QUESTIONS.length*100)+'%';prog.append(fill);wrap.append(prog);wrap.append(el('p','small muted',`${h.seen} de ${QUESTIONS.length} preguntas vistas · ${QUESTIONS.filter(mastered).length} dominadas · ${QUESTIONS.filter(due).length} pendientes de repaso.`));let line=el('div','action-footer');line.append(btn('Compartir progreso',shareProgress,'btn primary'),btn('Exportar progreso',exportData,'btn'),btn('Importar progreso',()=>$('#importFile').click(),'btn'),btn('Borrar historial',resetData,'btn outline-red'));wrap.append(line);root.append(wrap);
  let trend=makePanel('padded');trend.style.marginTop='16px';trend.append(el('h2','minititle','Evolución de los resultados'));trendChart(trend);root.append(trend);
  let cats=makePanel('padded');cats.style.marginTop='16px';cats.append(el('h2','minititle','Rendimiento por temática'));topicBars(cats);cats.append(el('p','tiny muted','Las tasas por tema son históricas e incluyen repeticiones. Usa también los aciertos a la primera para medir aprendizaje real.'));root.append(cats);
  let issues=makePanel('padded');issues.style.marginTop='16px';issuesList(issues);root.append(issues)}
 function toast(msg){let x=$('.toast');if(x)x.remove();x=el('div','toast',msg);document.body.append(x);setTimeout(()=>x.remove(),4000)}
+
+const SYNC_HASH='#progreso=';
+function portData(){return {history:app.history,bookmarks:app.bookmarks,settings:app.settings,session:app.session,sessionResults:app.sessionResults}}
+function viewedCount(d){return Object.values(d.history||{}).filter(x=>x&&x.attempts>0).length}
+function b64Encode(a){let s='';for(let i=0;i<a.length;i+=8192)s+=String.fromCharCode.apply(null,a.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function b64Decode(s){if(!/^[A-Za-z0-9_-]+$/.test(s))throw Error('Enlace inválido');const t=atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4));return Uint8Array.from(t,c=>c.charCodeAt(0))}
+async function encodeProgress(){
+ let bytes=new TextEncoder().encode(JSON.stringify({version:1,progress:portData()}));
+ if(typeof CompressionStream==='function'){try{bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());return 'g'+b64Encode(bytes)}catch(e){}}
+ return 'b'+b64Encode(bytes);
+}
+async function decodeProgress(t){
+ if(!t||t.length>200000)throw Error('Enlace demasiado largo o incompleto');
+ let bytes=b64Decode(t.slice(1));
+ if(t[0]==='g'){if(typeof DecompressionStream!=='function')throw Error('Actualiza Safari para abrir este enlace comprimido');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer())}
+ else if(t[0]!=='b')throw Error('Formato desconocido');
+ if(bytes.length>3000000)throw Error('Datos demasiado grandes');
+ const x=JSON.parse(new TextDecoder().decode(bytes));
+ if(x.version!==1||!x.progress||!x.progress.history||!x.progress.bookmarks||!Array.isArray(x.progress.sessionResults))throw Error('Datos del progreso inválidos');
+ if(x.progress.session&&(!Array.isArray(x.progress.session.ids)||!x.progress.session.answers||!x.progress.session.checks))throw Error('Sesión inválida');
+ return x.progress;
+}
+function progressModal(title){
+ const backdrop=el('div','modal-scrim'),panel=el('section','modal share-modal');
+ panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.append(el('h2','',title));
+ backdrop.append(panel);document.body.append(backdrop);
+ backdrop.onclick=e=>{if(e.target===backdrop)backdrop.remove()};
+ return {panel,close:()=>backdrop.remove()};
+}
+function modalActions(panel){const r=el('div','share-actions');panel.append(r);return r}
+async function copyProgress(field){
+ try{await navigator.clipboard.writeText(field.value);toast('Enlace copiado');return}catch(e){}
+ field.focus();field.select();field.setSelectionRange(0,field.value.length);
+ if(document.execCommand('copy'))toast('Enlace copiado');else toast('Selecciona y copia el enlace manualmente');
+}
+async function shareProgress(){
+ const m=progressModal('Compartir progreso'),p=el('p','','Generando enlace…');m.panel.append(p);
+ try{
+  const url=location.href.split('#')[0]+SYNC_HASH+await encodeProgress();
+  p.textContent='Abre este enlace desde Safari o tu ordenador. Al abrirlo podrás decidir si importar los datos.';
+  const field=el('textarea','share-url');field.value=url;field.readOnly=true;m.panel.append(field);
+  if(url.length>8000)m.panel.append(el('p','','Enlace largo: si la aplicación lo recorta, utiliza la exportación JSON.'));
+  m.panel.append(el('p','','El enlace incluye tu progreso; quien lo reciba podrá consultarlo. No se sincroniza automáticamente.'));
+  const row=modalActions(m.panel);
+  row.append(btn('Copiar enlace',()=>copyProgress(field),'btn primary'));
+  if(navigator.share)row.append(btn('Compartir…',async()=>{try{await navigator.share({title:'Progreso Databricks',url})}catch(e){}},'btn'));
+  row.append(btn('Cerrar',m.close,'btn'));
+ }catch(e){p.textContent='No se pudo generar el enlace: '+e.message;modalActions(m.panel).append(btn('Cerrar',m.close,'btn'))}
+}
+async function importProgressLink(){
+ if(!location.hash.startsWith(SYNC_HASH))return;
+ const token=location.hash.slice(SYNC_HASH.length);
+ try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+ let incoming;
+ try{incoming=await decodeProgress(token)}catch(e){const m=progressModal('Enlace inválido');m.panel.append(el('p','',e.message));modalActions(m.panel).append(btn('Cerrar',m.close,'btn'));return}
+ const m=progressModal('Importar progreso compartido');
+ m.panel.append(el('p','','Progreso recibido: '+viewedCount(incoming)+' preguntas vistas, '+Object.values(incoming.bookmarks).filter(Boolean).length+' favoritas y '+incoming.sessionResults.length+' sesiones.'));
+ const local=viewedCount(app);
+ m.panel.append(el('p','','Progreso local: '+local+' preguntas vistas. Importar sustituirá el progreso de este navegador, sin fusionarlo.'));
+ const row=modalActions(m.panel);
+ if(local||app.session||app.sessionResults.length)row.append(btn('Guardar copia local',exportData,'btn'));
+ row.append(btn('Importar y continuar',()=>{
+  if((local||app.session||app.sessionResults.length)&&!confirm('¿Sustituir el progreso local por el del enlace?'))return;
+  app={...EMPTY(),...incoming,settings:{...EMPTY().settings,...(incoming.settings||{})},sessionResults:incoming.sessionResults||[]};
+  page=app.session&&!app.session.finished?'practice':'home';save();m.close();draw();window.scrollTo(0,0);toast('Progreso importado');
+ },'btn primary'));
+ row.append(btn('Cancelar',m.close,'btn'));
+}
+
 function exportData(){let d=JSON.stringify({version:2,exportedAt:new Date().toISOString(),payload:app},null,2);let b=new Blob([d],{type:'application/json'}),url=URL.createObjectURL(b);let a=document.createElement('a');a.href=url;a.download='databricks_progreso_'+new Date().toISOString().slice(0,10)+'.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Copia de seguridad descargada')}
 $('#importFile').addEventListener('change',async function(){let f=this.files?.[0];if(!f)return;try{let json=JSON.parse(await f.text()),x=json.payload;if(!x||typeof x.history!=='object'||typeof x.bookmarks!=='object')throw Error('Formato inválido');if(!confirm('¿Sustituir el progreso local por el del archivo importado?'))return;app={...EMPTY(),...x,settings:{...EMPTY().settings,...(x.settings||{})},sessionResults:x.sessionResults||[]};save();go('home');toast('Progreso importado correctamente')}catch(e){alert('No se pudo importar el archivo: '+e.message)}this.value=''});
 function resetData(){if(!confirm('¿Eliminar todos los intentos, favoritos y sesiones guardadas de este navegador?'))return;app=EMPTY();save();go('home');toast('Progreso reiniciado')}
@@ -255,5 +324,6 @@ function draw(){const root=$('#root');root.replaceChildren();nav();if(page==='ho
 window.addEventListener('keydown',(e)=>{if(e.altKey||e.ctrlKey||e.metaKey||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;let s=app.session;if(!s||s.finished||page!=='practice')return;if(/^[1-5]$/.test(e.key)){let q=current(),opt=q.options[Number(e.key)-1];if(opt)answerClick(opt.key)}else if(e.key==='ArrowRight'){e.preventDefault();move(s.pos+1)}else if(e.key==='ArrowLeft'){e.preventDefault();move(s.pos-1)}});
 clockHandle=setInterval(()=>{let s=app.session;if(!s||s.finished||s.mode!=='exam')return;if(Date.now()-s.startedAt>=s.durationMs){finish(true);toast('Tiempo agotado: el examen se ha entregado automáticamente')}else{let label=[...document.querySelectorAll('.pill')].find(x=>x.textContent.startsWith('⏱ '));if(label)label.textContent=timerText(s)}},1000);
 draw();
+importProgressLink();
 </script>
 </body></html>
