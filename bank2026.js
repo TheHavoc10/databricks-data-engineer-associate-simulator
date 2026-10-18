@@ -111,10 +111,10 @@ function bank26Apply(questions){
    swap(/Databricks Repos/gi,"Git folders (antes Databricks Repos)");
    swap(/Databricks Asset Bundles/gi,"Declarative Automation Bundles (antes Databricks Asset Bundles)");
    swap(/\bSQL endpoint(s)?\b/gi,"SQL warehouse$1");
-   swap(/Delta Live Tables \(DLT\)/gi,"Lakeflow Spark Declarative Pipelines (antes Delta Live Tables)");
-   swap(/Delta Live Tables/gi,"Lakeflow Spark Declarative Pipelines (antes Delta Live Tables)");
+   swap(/Delta Live Tables(?: \(DLT\))?/gi,"Lakeflow Spark Declarative Pipelines (antes Delta Live Tables)");
    swap(/Delta Live Table pipeline/gi,"Lakeflow Spark Declarative Pipeline");
    swap(/DLT pipeline/gi,"Lakeflow Spark Declarative Pipeline");
+   swap(/Delta Sharing/gi,"OpenSharing (antes Delta Sharing)");
    // Las respuestas correctas que contienen un nombre antiguo se renombran;
    // NO convertimos automáticamente las opciones erróneas en otras soluciones.
    q.options.forEach(o=>{
@@ -123,7 +123,8 @@ function bank26Apply(questions){
      o.text=o.text.replace(/Databricks Asset Bundles/gi,"Declarative Automation Bundles (antes Databricks Asset Bundles)")
        .replace(/Databricks Repos/gi,"Git folders")
        .replace(/\bSQL endpoint(s)?\b/gi,"SQL warehouse$1")
-       .replace(/Delta Live Tables/gi,"Lakeflow Spark Declarative Pipelines (antes DLT)");
+       .replace(/Delta Live Tables/gi,"Lakeflow Spark Declarative Pipelines (antes DLT)")
+       .replace(/Delta Sharing/gi,"OpenSharing (antes Delta Sharing)");
      if(o.text!==old)edited=true;
    });
    const custom=bank26Custom[q.id];
@@ -185,12 +186,12 @@ const bank26Custom={
  q.answerWhy="ALL PRIVILEGES sobre una tabla concede los privilegios aplicables a esa tabla; no concede propiedad y requiere los permisos de uso en catalog/schema para el acceso.";
 },
 144(q){
- q.question=q.question.replace(/DLT/gi,"Lakeflow Spark Declarative Pipelines");
+ q.question=q.question.replace(/\bDLT\b/gi,"Lakeflow Spark Declarative Pipelines");
  const a=q.options.find(o=>o.key==="A");if(a)a.text=a.text.replace(/import dlt/g,"from pyspark import pipelines as dp").replace(/@dlt\.table/g,"@dp.table");
  q.answerWhy="En la API moderna, from pyspark import pipelines as dp y @dp.table definen una Streaming Table. spark.readStream.format('kafka') lee Kafka incrementalmente.";
 },
 151(q){
- q.question=q.question.replace(/DLT/gi,"Lakeflow Spark Declarative Pipelines");
+ q.question=q.question.replace(/\bDLT\b/gi,"Lakeflow Spark Declarative Pipelines");
  const map={A:"from pyspark import pipelines as dp\n@dp.materialized_view\ndef raw_customers():\n    return spark.read.format('csv').load('s3://my-bucket/raw-customers/')",
  B:"from pyspark import pipelines as dp\n@dp.materialized_view\ndef raw_customers():\n    return spark.format.json('s3://my-bucket/raw-customers/')",
  C:"from pyspark import pipelines as dp\n@dp.materialized_view\ndef raw_customers():\n    return spark.read.json('s3://my-bucket/raw-customers/')",
