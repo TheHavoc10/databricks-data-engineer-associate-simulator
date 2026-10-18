@@ -99,7 +99,7 @@ D:"La condición IS NOT NULL es adecuada, pero ON VIOLATION FAIL no es la cláus
 },
 72:{
 A:"Describe el modo triggered: procesa los datos disponibles y termina el update. El enunciado establece Continuous, que permanece activo esperando nuevos datos.",
-B:"En el banco antiguo, B y E describen casi lo mismo. La supuesta diferencia en la motivación de persistencia de recursos no refleja una distinción técnica objetiva; esta pregunta debería revisarse por ambigüedad.",
+B:"La opción mezcla procesamiento continuo con apagar recursos tras el primer refresco. En un pipeline continuous, el procesamiento permanece activo hasta que se detiene.",
 C:"Continuous no procesa una sola vez para quedarse totalmente ocioso; mantiene el pipeline activo y realiza procesamiento cuando llegan novedades.",
 D:"La finalización tras una sola actualización correspondería a triggered, no a continuous. Mantener algunos recursos para desarrollo no cambia ese hecho."
 },
@@ -248,6 +248,217 @@ B:"All-purpose puede quedar encendido entre lotes y requiere gestión de cluster
 D:"Classic Jobs compute se crea al ejecutar el Job y es válido, pero exige seleccionar runtime, nodos y políticas. Serverless gestiona aprovisionamiento y escalado para workloads compatibles y reduce tareas operativas."
 }
 };
+
+// Segundo bloque: SQL, transacciones, gobierno, ingesta y control de versiones.
+Object.assign(RATIONALE_DETAIL,{
+5:{E:"Una tabla Delta no equivale a un único fichero de datos. Suele contener múltiples Parquet y un _delta_log con commits, cambios de esquema y estadísticas, que hacen posibles ACID y Time Travel."},
+6:{
+A:"SELECT * ... WHERE age > 25 identifica filas, pero no altera la tabla persistida. La orden que elimina físicamente filas del conjunto lógico es DELETE FROM my_table WHERE age > 25.",
+B:"UPDATE modifica columnas existentes mediante SET column = value; este fragmento ni tiene SET ni ordena borrar filas. Para quitar registros hay que utilizar DELETE FROM con predicado WHERE.",
+E:"DELETE sí elimina filas, pero age <= 25 selecciona las de 25 años o menos. El requisito es borrar las que superan 25, por lo que la condición debe ser age > 25."
+},
+8:{
+A:"COUNT(member_id) omite por definición las filas donde member_id es NULL; si una tabla tiene 10 filas y 3 NULL, devuelve 7, justo lo contrario de lo pedido.",
+D:"NULL no es una función agregada y SELECT null(member_id) no cuenta registros. Para saber cuántos valores faltan se evalúa COUNT_IF(member_id IS NULL) o COUNT(*) - COUNT(member_id)."
+},
+9:{
+A:"Poder almacenar datos estructurados y no estructurados es una ventaja de un data lake tradicional; no garantiza que un write parcialmente fallido deje la tabla consistente como lo haría una transacción ACID.",
+C:"Un motor SQL puede consultar un CSV sin transacciones ACID. Que exista SELECT no evita lecturas inconsistentes ni escrituras parciales; ACID sí define esas garantías.",
+D:"Parquet y otros formatos abiertos facilitan interoperabilidad, pero un fichero Parquet por sí solo no mantiene un registro transaccional ni asegura atomicidad de cambios concurrentes.",
+E:"Entrenar modelos o usar IA es un caso de uso de la plataforma; puede realizarse sobre datos inconsistentes. La mejora de integridad de una tabla frente a un data lake tradicional viene de ACID."
+},
+10:{C:"Una Delta Table conserva físicamente registros en archivos administrados por el formato Delta, aunque nadie la consulte. La pregunta pide combinar tablas temporalmente sin persistir resultados, por lo que la vista temporal es mejor."},
+11:{
+A:"Un representante comercial de Databricks no obtiene automáticamente MANAGE ni ownership sobre los objetos de Unity Catalog de tu metastore. Debe intervenir un usuario con permisos de administración técnica.",
+B:"Unity Catalog permite ALTER TABLE ... OWNER TO cuando lo ejecuta un principal autorizado, como un metastore administrator. El hecho de que el propietario original se marche no vuelve la tabla intransferible."
+},
+14:{
+A:"La sentencia CREATE TABLE puede llevar COMMENT 'Contains PII' para documentar que la tabla contiene datos personales. Lo que no hace COMMENT por sí solo es aplicar una política automática de mascarado.",
+E:"Escribir PII sin un campo ni una cláusula SQL no añade metadatos a la tabla. Se necesita COMMENT '...' o una propiedad/etiqueta válida en la definición del objeto."
+},
+15:{A:"La interfaz web de Databricks es un servicio gestionado por Databricks en el control plane clásico. La pregunta busca lo almacenado en la cuenta cloud del cliente, donde se alojan los datos en storage."},
+16:{
+A:"DROP TABLE retira un objeto del catálogo; no compara claves entre origen y destino ni conserva una fila existente si coincide con una nueva.",
+B:"IGNORE por sí solo no es una instrucción general de upsert en Delta. MERGE INTO permite especificar cuándo se actualiza una coincidencia y cuándo se inserta la fila nueva.",
+D:"APPEND añade todas las filas entrantes sin comprobar si la clave ya existe. Repetir un batch puede introducir duplicados; MERGE enlaza fuentes y destinos mediante ON.",
+E:"INSERT INTO incorpora filas nuevas sin resolver qué hacer con las que ya existen según una clave. MERGE INTO permite MATCHED UPDATE y NOT MATCHED INSERT en una sola operación."
+},
+19:{
+A:"COPY INTO acepta el formato de los ficheros mediante FILEFORMAT = 'PARQUET', entre otros ajustes. El motivo del segundo run sin filas nuevas es el seguimiento de ficheros ya cargados, no la imposibilidad de especificar formato.",
+B:"COPY INTO puede leer todos los ficheros elegibles de un directorio. La cláusula FILES restringe un subconjunto, pero no es obligatoria para el seguimiento incremental.",
+D:"Parquet es un formato admitido como entrada de COPY INTO, igual que CSV y JSON según la configuración. El que una recarga no inserte filas apunta a idempotencia, no a incompatibilidad del formato.",
+E:"Una carga COPY INTO confirmada se ve en la tabla sin un segundo REFRESH obligatorio. La reejecución ignora los ficheros ya cargados, salvo que se fuerce expresamente."
+},
+20:{
+A:"Cambiar LOCATION o mover ficheros es un problema de almacenamiento y metadatos, no de matching entre filas de dos tablas. MERGE se emplea cuando se necesita actualizar/insertar según claves.",
+B:"Una tabla Delta externa puede recibir tanto INSERT como MERGE si cumple permisos y requisitos. Ser external solo describe quién gestiona su ubicación, no la semántica de deduplicación.",
+C:"MERGE requiere un destino Delta compatible; el origen puede proceder de distintas lecturas. Que el source no sea Delta no obliga a utilizar MERGE en lugar de INSERT."
+},
+21:{
+B:"En Spark el lector JDBC se identifica con format('jdbc') y opciones como url/dbtable. Auto Loader trabaja con nuevos archivos desde cloud storage y no sustituye el conector de una base transaccional.",
+C:"sqlite-stream no es el identificador de un proveedor JDBC admitido por spark.read.format. Un origen SQL compatible se lee usando el provider jdbc y el driver adecuado al motor."
+},
+23:{
+A:"No hay umbral de 10 GB que cambie qué elimina DROP TABLE. Las tablas managed y external responden distinto por su modo de administración, no por el tamaño de sus archivos.",
+B:"Que una tabla pese menos de 10 GB tampoco hace que DROP TABLE elimine todos los ficheros. El efecto sobre storage depende de si el catálogo administra los datos o solo la referencia externa."
+},
+24:{
+B:"Una FUNCTION recibe argumentos y devuelve un valor o relación calculada al ejecutarse, pero no crea por sí sola una tabla persistente para diferentes equipos y sesiones.",
+D:"Una TEMP VIEW existe solo en el ámbito temporal correspondiente y consulta su fuente; no materializa archivos compartidos y puede desaparecer al terminar la sesión."
+},
+27:{
+A:"DateType es una clase de esquema Spark para almacenar fechas en columnas, no un mecanismo de planificación. Para definir una cadencia de Job se utiliza una expresión cron o un trigger.",
+C:"TimestampType representa el tipo de un valor temporal dentro de un DataFrame. No define a qué hora del día o día de semana se dispara un Lakeflow Job."
+},
+28:{
+A:"El código SQL escrito solo no ejecuta una consulta desde Python. Al integrarlo en una variable DataFrame necesitas una llamada como spark.sql('SELECT * FROM sales').",
+B:"spark.delta.table no es un método estándar de SparkSession. spark.table('sales') lee una tabla por nombre, mientras spark.sql(query) ejecuta una sentencia SQL completa."
+},
+31:{B:"Llamar trigger() sin los parámetros necesarios no fija la latencia pedida de cinco segundos. El ejemplo correcto explicita trigger(processingTime='5 seconds') para microbatches periódicos."},
+35:{
+A:"Git folders permite generar commits de tus cambios en el workspace vinculado a un repo. La integración completa entre ramas normalmente ocurre en el proveedor Git remoto; no se pide un commit.",
+B:"Pull trae del proveedor remoto los últimos cambios a la rama activa del Git folder. Es una operación disponible en la experiencia Databricks, así que no es la que normalmente haces solo desde GitHub.",
+D:"Clone crea una copia conectada de un repo en el workspace; forma parte de la configuración inicial de Git folders. Merge de ramas mediante PR normalmente se hace en el proveedor externo."
+},
+39:{
+A:"INNER JOIN empareja registros de dos tablas con una condición ON; no concatena marzo y abril. Las ventas de meses diferentes se apilan con UNION/UNION ALL, no por claves comunes.",
+C:"OUTER JOIN busca filas relacionadas entre conjuntos y añade NULL cuando falta correspondencia. No es la operación para reunir todas las transacciones de dos meses en las mismas columnas.",
+D:"INTERSECT devuelve únicamente filas presentes en ambas tablas. La pregunta requiere unir todas las transacciones de marzo y abril, incluidas las exclusivas de cada mes."
+},
+40:{D:"Bajar el tamaño del warehouse cambia recursos por unidad de tiempo, pero si se mantiene encendido todo el día seguirá generando tiempo ocioso. Auto Stop lo apaga automáticamente después de un periodo de inactividad."},
+46:{
+A:"Merge integra cambios entre ramas en el proveedor, pero la acción que actualiza el Git folder existente con commits del remoto es Pull. Mezclar ramas no es lo mismo que traer cambios de su rama remota.",
+B:"Push publica en remoto commits realizados localmente; aquí se quiere recibir los que otra persona ya publicó, que corresponde a Pull.",
+D:"Commit guarda cambios del workspace en un commit local de Git; no importa los cambios ya hechos en el repositorio remoto.",
+E:"Clone crearía otro Git folder a partir del remoto. Si ya tienes uno conectado, lo correcto es actualizarlo mediante Pull, sin duplicar la copia de trabajo."
+},
+49:{
+B:"Refrescar informes rápidamente suele depender del arranque de compute, de SQL warehouses o del tamaño del workload. Single-node elimina paralelismo y no proporciona por sí solo baja latencia para un informe automatizado.",
+D:"Un único nodo no tiene workers distribuidos entre los que repartir cargas; no ofrece escalado horizontal real para procesamientos que crecen mucho.",
+E:"Transformaciones manuales sobre muchos datos suelen aprovechar particiones en varios workers. En single-node toda la carga compite por CPU/memoria de una máquina."
+},
+51:{
+A:"REDUCE es un patrón de agregación/transformación de colecciones en Spark, no una operación de mantenimiento que compacte múltiples archivos pequeños Delta.",
+C:"COMPACTION no es el comando de mantenimiento SQL que se pide de forma independiente. Para compactar ficheros de una tabla Delta se usa OPTIMIZE tabla.",
+E:"VACUUM borra archivos antiguos que ya no están referenciados y superan el periodo de retención. OPTIMIZE compacta archivos pequeños para mejorar lectura; son tareas diferentes."
+},
+56:{
+A:"Una celda de un notebook Databricks puede usar SQL aunque el notebook sea Python, mediante %sql al principio de esa celda. No hay que crear otro notebook.",
+B:"Elegir el intérprete SQL de una celda no obliga a conectarla a un SQL Warehouse distinto: la magia %sql indica el lenguaje de la celda y utiliza el entorno admitido.",
+C:"Si el notebook utiliza Python por defecto, escribir SELECT sin %sql haría que Python intentase interpretar un código que no es Python. Se necesita la magia de lenguaje.",
+E:"Cambiar el lenguaje por defecto a SQL podría afectar al resto de celdas Python existentes. Con %sql cambias solo una celda y conservas la mezcla de lenguajes."
+},
+57:{
+A:"TRANSFORM sirve para aplicar expresiones a colecciones en SQL de Spark, pero no redistribuye automáticamente valores de una categoría como nuevas columnas de salida.",
+C:"SUM agrega importes en una sola expresión; para convertir categorías en cabeceras de columnas necesitas la operación PIVOT, quizá acompañada de SUM como agregador.",
+D:"CONVERT se relaciona con conversión de valores/tipos según el dialecto, no con reorientar filas a columnas por categoría.",
+E:"WHERE elimina las filas que no cumplen un predicado; no genera nuevas columnas a partir de los valores de una columna."
+},
+61:{
+C:"ALL PRIVILEGES concede más facultades que SELECT para consultar una vista y puede incluir acciones no deseadas. Con el modelo de permisos de UC, acceder a la vista no exige propiedad de sus tablas base al consumidor.",
+D:"No es necesario ALL PRIVILEGES del esquema para ejecutar una vista: basta USE CATALOG, USE SCHEMA y SELECT sobre la vista, según el contexto de UC."
+},
+65:{
+B:"Un pipeline declarativo de Lakeflow puede combinar definiciones SQL y Python como fuentes de datasets diferentes. No es un requisito traducir todas las transformaciones Python a SQL.",
+C:"Las Streaming Tables forman parte del procesamiento admitido en Lakeflow; convertirlas forzosamente a batch haría perder su semántica incremental, sin que lo exija el producto.",
+D:"Tampoco tienes que reescribir todas las consultas SQL en Python. El motor crea el grafo de dependencias a partir de los datasets definidos en ambos lenguajes."
+},
+66:{
+A:"En Python, una función se define con def add_integers(x, y), no con function. Con la sintaxis propuesta, el intérprete falla antes de ejecutar la suma.",
+B:"Tiene dos problemas: Python no reconoce function como declaración y además la expresión x + y no se devuelve. La firma correcta utiliza def y el cuerpo return x + y.",
+C:"print(x+y) muestra un valor en la salida, pero la función devuelve None. Si una tarea posterior usa el resultado, necesita return x+y.",
+E:"En Python una expresión sin return se evalúa y descarta dentro del cuerpo, por lo que la llamada devuelve None. La pregunta exige devolver el número sumado."
+},
+67:{
+B:"processingTime establece cadencia entre microbatches y acepta duraciones como '5 seconds', no 'once'. Para consumir los datos disponibles y terminar se usa availableNow=True.",
+C:"Continuous es otro tipo de trigger y no acepta 'once' como valor en este contexto. AvailableNow permite procesar el backlog en microbatches acotados y terminar después."
+},
+70:{
+A:"TRUNCATE vacía la versión vigente y recargar el snapshot antiguo cambia lo que verían los consumidores actuales. Time Travel permite consultar una versión sin sobrescribir el presente.",
+D:"VACUUM elimina archivos de versiones antiguas según la retención, justo los que Time Travel podría necesitar para recuperar el estado de hace dos semanas. No sirve para consultar un snapshot."
+},
+73:{
+A:"Convertir timestamps a un formato común mejora la calidad y homogeneidad del detalle, una labor de Silver. Gold normalmente modela KPIs, agregados o entidades de consumo de negocio.",
+B:"Agregar directamente datos no depurados puede propagar duplicados, códigos incoherentes y errores de origen al resultado. Antes de construir Gold se suelen aplicar controles de Silver.",
+C:"Eliminar registros corruptos es depuración de calidad típica de Silver; aún no construye una métrica agregada o tabla modelada para consumo de usuarios de negocio.",
+E:"Leer eventos de una fuente streaming y almacenarlos fielmente pertenece a Bronze (ingesta cruda). El paso Gold no es simplemente copiar el origen a una tabla."
+},
+78:{
+C:"Una tabla Delta registrada puede leerse incrementalmente por su nombre usando spark.readStream.table('nombre'). No necesitas sustituir el nombre por su path físico si tienes metadatos y permisos válidos.",
+D:"El formato sigue siendo delta: stream expresa el modo de lectura con readStream, no es un formato de archivos para la opción format(...)."
+},
+79:{
+A:"La agregación groupBy(store).sum(sales) convierte detalle en métricas de negocio y suele representar Silver → Gold, no la ingesta incremental raw → Bronze pedida.",
+B:"La opción filtra una tabla sales ya existente y no consume los ficheros raw recién llegados; corresponde a limpieza de datos que ya se encuentran en una capa anterior.",
+C:"withColumn(avgPrice, ...) deriva una columna de una tabla previa, pero no realiza la lectura inicial de archivos de origen, requisito específico del paso hacia Bronze.",
+D:"read y write son las APIs batch de Spark; la ingesta incremental necesita readStream y writeStream con checkpoint para registrar el progreso entre ejecuciones."
+},
+83:{
+C:"SELECT concede capacidad de consulta, no el conjunto de privilegios aplicables a la tabla, como MODIFY según el contexto. ALL PRIVILEGES no equivale a solo lectura.",
+D:"La instrucción coloca el principal team donde debe ir una tabla y el nombre de tabla donde debe ir el principal; el orden correcto es GRANT ... ON TABLE tabla TO principal."
+},
+84:{
+A:"Databricks Jobs admite notificaciones de ejecución/fallo configurables, de modo que no es necesario que cada celda del notebook implemente manualmente lógica de envío de avisos.",
+D:"Lakeflow Jobs puede emitir notificaciones cuando fallan runs o tareas, según configuración. Negar la funcionalidad omite una opción nativa de observabilidad."
+},
+87:{
+B:"Enviar por correo a un destinatario email no es lo mismo que llamar al webhook del servicio de mensajería del equipo. Para integrarlo debe crearse el destino apropiado compatible con el webhook.",
+C:"One-time modifica la política/frecuencia con que se dispara la notificación, pero no configura el endpoint externo donde el equipo necesita recibirla.",
+E:"Configurar una alerta sin destino de notificaciones deja el resultado en Databricks, pero nadie recibe el mensaje en el canal externo solicitado."
+},
+88:{
+B:"Separar un dashboard en un warehouse diferente no asegura apagar recursos ociosos; puede sumar otro servicio encendido. Auto Stop sí desconecta el warehouse tras inactividad.",
+C:"Disminuir tamaño reduce algunos costes instantáneos, pero un warehouse pequeño encendido toda la noche sigue consumiendo recursos. El enunciado busca reducir tiempo activo no usado.",
+D:"Compartir SQL Warehouse entre consultas puede aprovechar la infraestructura, pero no garantiza cero gasto durante periodos sin peticiones. Auto Stop actúa sobre la inactividad."
+},
+100:{
+B:"La gramática de SQL es INSERT INTO my_table VALUES (...). La opción invierte INTO y VALUES, así que no es una sentencia válida para insertar la fila.",
+C:"UPDATE modifica filas existentes y exige SET columna=valor (y normalmente WHERE). Para incorporar una fila nueva se usa INSERT INTO ... VALUES.",
+D:"La cadena mezcla UPDATE con VALUES sin tabla en una posición válida ni cláusula SET. No ejecuta ni una modificación SQL ni una inserción."
+},
+104:{
+A:"DROP elimina la tabla u otro objeto, no compara filas por una clave de negocio. Para evitar duplicados sin perder el destino utiliza MERGE INTO con coincidencia ON.",
+B:"INSERT añade filas sin cotejar claves existentes; ejecutar dos veces el mismo lote puede repetir registros. MERGE permite escoger MATCHED/NOT MATCHED.",
+D:"APPEND es una modalidad de escritura que agrega registros al final sin búsqueda de claves. No implementa upsert ni deduplicación de filas existentes."
+},
+108:{
+C:"FROM CSV no especifica el proveedor de una tabla externa en CREATE TABLE de Spark SQL. Para datos CSV se requiere la cláusula USING CSV y, si procede, LOCATION.",
+D:"USING DELTA asume que la ubicación ya contiene una tabla Delta con _delta_log. Si solo hay archivos CSV, el lector Delta no puede interpretarlos como una tabla Delta."
+},
+110:{
+A:"TRANSFORM aplica funciones a arrays y otros datos, pero no reorganiza los valores de una dimensión como columnas nuevas de un resultado agregado.",
+C:"SUM agrega una medida, pero no convierte valores categóricos en columnas; puedes utilizarlo dentro de PIVOT, que es la operación que cambia la orientación.",
+D:"CONVERT no designa el operador Spark SQL para reorganizar categorías como columnas. La sentencia solicitada utiliza PIVOT."
+},
+111:{A:"spark.delta.sql(...) no es método de SparkSession. La consulta SQL dinámica se ejecuta con spark.sql(f'SELECT ... FROM {table_name}'), teniendo en cuenta validar identificadores."},
+119:{C:"Gold se destina a consumo y KPIs, por lo que normalmente ofrece una versión más modelada para negocio que las capas anteriores. No es la capa de datos más cruda del lakehouse."},
+134:{
+B:"DROP TABLE es DDL, pero elimina un objeto ya existente; no responde a una pregunta que pide crear la estructura de una nueva tabla.",
+C:"ALTER TABLE ... ADD COLUMN es DDL y modifica una tabla existente; no crea una tabla desde cero como CREATE TABLE.",
+D:"INSERT INTO es DML porque agrega registros a una tabla existente, no cambia su definición. Además, el ejemplo carece de una coma entre 1 y 'Alice'."
+},
+139:{
+A:"coalesce reduce particiones sin garantizar una redistribución homogénea; si ya hay una partición sobrecargada, puede seguir igual o concentrar más datos. Repartitioning o salting se valoran ante skew.",
+D:"Aumentar memoria puede evitar ciertos spills, pero una única task que procesa la mayoría de filas seguirá durando mucho más que las demás. El origen es distribución desigual por clave."
+},
+141:{
+B:"Reglas de conformidad, validación y enriquecimiento corresponden habitualmente a Silver, no a Bronze, que intenta conservar datos del origen para poder reprocesarlos.",
+C:"Limpiar exhaustivamente al ingerir podría descartar información necesaria para auditoría o reproceso. Bronze suele preservar el original y pasar la limpieza a Silver.",
+D:"Agregar varias fuentes para responder preguntas de negocio se asocia con Silver conformada o Gold; Bronze es la capa de aterrizaje y trazabilidad de las fuentes."
+},
+142:{
+A:"Delta Lake es un formato de tabla con ACID, no el mecanismo para consultar bases de datos externas en su origen sin copiarlas. Ese caso corresponde a federación de consultas.",
+C:"MLflow registra experimentos y modelos de machine learning. No convierte SQL remoto en consultas federadas contra sistemas OLTP o warehousing externos.",
+D:"Databricks Connect permite desarrollar localmente usando compute Databricks remoto, no es un conector general para consultar bases corporativas de forma federada."
+},
+148:{D:"Un SQL Warehouse ejecuta consultas SQL sobre los datos, no tareas genéricas de Python o notebooks arbitrarios. Para esas transformaciones se necesita compute de notebook/job compatible."},
+150:{
+A:"groupBy('category') agrega por categoría, pero el requisito es obtener el total por región. La clave del groupBy debe coincidir con la dimensión solicitada.",
+C:"En la API DataFrame, sum no se encadena antes de groupBy sobre el DataFrame de esta manera. Primero agrupas por región y luego agregas sum('sales_amount').",
+D:"groupBy es un método del DataFrame que prepara grupos, no de una expresión Column dentro de agg. El orden válido es df.groupBy('region').agg(sum('sales_amount'))."
+}
+});
+
 function applyRationaleDetails(q){
   const map=RATIONALE_DETAIL[q.id];
   if(!map)return;

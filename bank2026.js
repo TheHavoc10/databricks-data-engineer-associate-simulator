@@ -3,7 +3,7 @@
  */
 const BANK26_ARCHIVE=new Set([26,38,60,68,69,85,86,90,93,97,101,102,103,105,106,109,112,113,114,115,116,117,120,123,124,126,127,128,162,175,183,185,186,196,206,209,230]);
 const BANK26_REVIEW=new Set([]);
-const BANK26_UPDATE=new Set([11,63,199,201,257,13,15,18,21,25,27,32,33,34,35,36,40,42,43,44,45,46,49,55,56,61,65,67,72,77,80,81,82,83,88,92,94,99,107,111,121,129,130,131,132,135,136,137,138,143,144,146,149,151,153,157,160,166,169,170,171,184,187,189,190,192,193,194,195,208,214,216,218,224,228,233,238,241,242,244,249,252,262,264,268,270,271,272,275]);
+const BANK26_UPDATE=new Set([30,11,63,199,201,257,13,15,18,21,25,27,32,33,34,35,36,40,42,43,44,45,46,49,55,56,61,65,67,72,77,80,81,82,83,88,92,94,99,107,111,121,129,130,131,132,135,136,137,138,143,144,146,149,151,153,157,160,166,169,170,171,184,187,189,190,192,193,194,195,208,214,216,218,224,228,233,238,241,242,244,249,252,262,264,268,270,271,272,275]);
 const BANK26_DUP={
 38:86,68:1,69:54,85:45,90:40,93:3,97:46,101:51,102:24,103:19,105:12,109:58,112:1,113:62,114:66,115:31,116:25,117:36,120:33,123:71,126:32,127:43,128:37,162:201,183:187,185:181,186:182,209:198
 };
@@ -137,6 +137,31 @@ function bank26Apply(questions){
  }
 }
 const bank26Custom={
+30(q){
+  // En el PDF todas las soluciones usaban spark.table(...) y writeStream; sin
+  // un streaming DataFrame writeStream falla. Corregimos la opción D.
+  const d=q.options.find(x=>x.key==="D");
+  if(d)d.text=d.text.replace('spark.table("sales")','spark.readStream.table("sales")');
+  q.answerWhy="Para un flujo Silver → Gold, se lee la tabla Silver incrementalmente con spark.readStream.table('sales') y se calcula un agregado de negocio groupBy('store').agg(sum('sales')). El resultado streaming necesita un modo de salida compatible como complete para el agregado indicado.";
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Structured Streaming",url:"https://docs.databricks.com/aws/en/structured-streaming/"}];
+},
+72(q){
+  q.question="A Lakeflow Spark Declarative Pipeline contains two Streaming Tables and three Materialized Views. The pipeline is configured for continuous execution rather than triggered execution. Previously unprocessed data exists and all definitions are valid. What should happen?";
+  const b=q.options.find(x=>x.key==="B");if(b)b.text="All datasets will be updated continuously until the pipeline is stopped, but compute resources will terminate automatically after the first refresh.";
+  const e=q.options.find(x=>x.key==="E");if(e)e.text="The pipeline remains active, processing new source data as it arrives and keeping compute running until the continuous execution is stopped.";
+  q.answerWhy="Continuous describe el modo de ejecución del pipeline, no el tipo de tabla: procesa incrementos conforme llegan y permanece activo. Triggered procesa los datos disponibles y después detiene la actualización. Una Materialized View puede estar en un pipeline continuous o triggered.";
+  q.wrongWhy={...q.wrongWhy,B:"Aunque el procesamiento continuo de datasets sí es correcto, terminar el compute tras el primer refresh contradice el modo continuous: el pipeline permanece activo mientras llegan novedades."};
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Triggered y Continuous",url:"https://docs.databricks.com/aws/en/ldp/concepts/pipeline-mode"}];
+},
+252(q){
+  const a=q.options.find(x=>x.key==="A");if(a)a.text="Set the cleansing task as a dependency in the report task's Depends on field, and keep Run if = All succeeded.";
+  q.answerWhy="Depends on establece la relación de precedencia entre tasks; Run if: All succeeded determina que el reporte solo arranque cuando la limpieza haya terminado con éxito. Son dos ajustes relacionados, pero no son sinónimos.";
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Job task dependencies",url:"https://docs.databricks.com/aws/en/jobs/run-if"}];
+},
+
 11(q){
   q.question="A Unity Catalog table owner has left the company and no longer has access. The table is not in the workspace's default workspace catalog. No remaining team member owns the table's parent schema/catalog or has the MANAGE privilege on the table. Who among the following can transfer ownership of the table to the new lead data engineer using Catalog Explorer?";
   q.options=[
