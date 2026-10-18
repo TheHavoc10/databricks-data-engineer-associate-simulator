@@ -2,18 +2,12 @@
  * Fuentes: examen 04-05-2026 y documentación oficial de Lakeflow, UC, Bundles y Git folders.
  */
 const BANK26_ARCHIVE=new Set([26,38,60,68,69,85,86,90,93,97,101,102,103,105,106,109,112,113,114,115,116,117,120,123,124,126,127,128,162,175,183,185,186,196,206,209,230]);
-const BANK26_REVIEW=new Set([11,63,199,201,257]);
-const BANK26_UPDATE=new Set([13,15,18,21,25,27,32,33,34,35,36,40,42,43,44,45,46,49,55,56,61,65,67,72,77,80,81,82,83,88,92,94,99,107,111,121,129,130,131,132,135,136,137,138,143,144,146,149,151,153,157,160,166,169,170,171,184,187,189,190,192,193,194,195,208,214,216,218,224,228,233,238,241,242,244,249,252,262,264,268,270,271,272,275]);
+const BANK26_REVIEW=new Set([]);
+const BANK26_UPDATE=new Set([11,63,199,201,257,13,15,18,21,25,27,32,33,34,35,36,40,42,43,44,45,46,49,55,56,61,65,67,72,77,80,81,82,83,88,92,94,99,107,111,121,129,130,131,132,135,136,137,138,143,144,146,149,151,153,157,160,166,169,170,171,184,187,189,190,192,193,194,195,208,214,216,218,224,228,233,238,241,242,244,249,252,262,264,268,270,271,272,275]);
 const BANK26_DUP={
 38:86,68:1,69:54,85:45,90:40,93:3,97:46,101:51,102:24,103:19,105:12,109:58,112:1,113:62,114:66,115:31,116:25,117:36,120:33,123:71,126:32,127:43,128:37,162:201,183:187,185:181,186:182,209:198
 };
-const BANK26_ISSUES={
-11:"La clave requiere comprobar privilegios y contexto exacto de Unity Catalog.",
-63:"La expresión location != NULL es incorrecta en SQL. Debe utilizarse location IS NOT NULL; hace falta revisar las opciones completas.",
-199:"Compartir datasets y notebooks no implica compartir un job ejecutable con sus tareas y credenciales.",
-201:"La elección Pro o Serverless depende de los requisitos concretos de conectividad de red; el enunciado no los fija suficientemente.",
-257:"Se debe comprobar la identidad y ubicación de la tabla tras la conversión antes de asumir que reiniciar el stream resuelve el checkpoint."
-};
+const BANK26_ISSUES={};
 const BANK26_RETIRE_REASON={
 26:"Versión duplicada y contradictoria: la respuesta afirmaba que el pipeline no puede combinar fuentes SQL/Python o streaming. Conservamos la nº 65.",
 60:"Ninguna alternativa responde realmente a cómo garantizar el cumplimiento del horario de workflows.",
@@ -26,6 +20,12 @@ const BANK26_RETIRE_REASON={
 230:"La clave solo crea una función UDF, pero nunca ejecuta ALTER TABLE ... SET ROW FILTER."
 };
 const BANK26_NOTES={
+11:"Validada en 2026: transferir propiedad es competencia de owner, owner del contenedor, MANAGE o metastore admin. Se precisa el escenario para que C sea inequívoca.",
+63:"Validada en 2026: reemplazado '!= NULL' por 'IS NOT NULL' y conservado ON VIOLATION FAIL UPDATE. B correcta.",
+199:"Validada en 2026: OpenSharing puede compartir tablas y archivos de notebooks; no se comparten automáticamente las definiciones ni la ejecución de Jobs.",
+201:"Validada en 2026: Pro SQL Warehouse para red personalizada cuando no se ha configurado conectividad privada para serverless; Serverless es preferible en general cuando cumple requisitos.",
+257:"Validada en 2026: ALTER TABLE SET MANAGED requiere reiniciar los streams afectados con el mismo checkpoint y configuración. No borrar estado.",
+
 13:"Para objetos de Unity Catalog usa DESCRIBE SCHEMA EXTENDED catalog.schema y comprueba la ubicación en los metadatos.",
 15:"La respuesta sobre almacenamiento en la cuenta del cliente describe compute clásico; serverless tiene un plano de ejecución gestionado diferente.",
 18:"Los horarios se orquestan con Lakeflow Jobs; las condiciones semanales también pueden configurarse mediante tareas separadas o lógica de control.",
@@ -137,6 +137,82 @@ function bank26Apply(questions){
  }
 }
 const bank26Custom={
+11(q){
+  q.question="A Unity Catalog table owner has left the company and no longer has access. The table is not in the workspace's default workspace catalog. No remaining team member owns the table's parent schema/catalog or has the MANAGE privilege on the table. Who among the following can transfer ownership of the table to the new lead data engineer using Catalog Explorer?";
+  q.options=[
+    {key:"A",text:"Databricks account representative"},
+    {key:"B",text:"Nobody: ownership cannot be transferred"},
+    {key:"C",text:"Unity Catalog metastore administrator"},
+    {key:"D",text:"The new lead data engineer, solely because of their role"},
+    {key:"E",text:"The former owner, despite having no account access"}
+  ];
+  q.answerWhy="Un administrador del metastore puede transferir la propiedad de tablas de Unity Catalog. También podrían hacerlo el propietario actual, el propietario del catálogo/esquema contenedor y quien tenga MANAGE; se han excluido expresamente esas otras posibilidades del escenario.";
+  q.wrongWhy={
+    A:"Un representante comercial no es un rol con privilegios de Unity Catalog.",
+    B:"La propiedad sí puede transferirse a otro usuario o grupo autorizado.",
+    D:"Ser el nuevo responsable del equipo no otorga automáticamente MANAGE ni propiedad.",
+    E:"El antiguo propietario sin acceso ya no puede ejecutar acciones sobre la tabla."
+  };
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Transfer ownership",url:"https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/ownership"}];
+},
+63(q){
+  q.question="A Lakeflow Spark Declarative Pipeline processes employee travel reimbursements. The field location must be provided. The pipeline must fail the affected update if any record has NULL in location. Which expectation is correct?";
+  q.options=[
+    {key:"A",text:"CONSTRAINT valid_location EXPECT (location IS NULL)"},
+    {key:"B",text:"CONSTRAINT valid_location EXPECT (location IS NOT NULL) ON VIOLATION FAIL UPDATE"},
+    {key:"C",text:"CONSTRAINT valid_location EXPECT (location IS NOT NULL) ON VIOLATION DROP ROW"},
+    {key:"D",text:"CONSTRAINT valid_location EXPECT (location IS NOT NULL) ON VIOLATION FAIL"}
+  ];
+  q.answerWhy="IS NOT NULL detecta si falta el valor, y ON VIOLATION FAIL UPDATE detiene y revierte la actualización afectada. En modo triggered otros flujos independientes podrían continuar; en continuous se detiene también el procesamiento dependiente.";
+  q.wrongWhy={
+    A:"IS NULL acepta precisamente los registros sin ubicación; además, sin ON VIOLATION se registran métricas pero se conservan filas inválidas.",
+    C:"DROP ROW descarta registros inválidos, pero no cumple el requisito de hacer fallar la actualización.",
+    D:"La sintaxis documentada es ON VIOLATION FAIL UPDATE, no FAIL a secas."
+  };
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Expectations",url:"https://docs.databricks.com/aws/en/ldp/expectations"}];
+},
+199(q){
+  q.question="A partner organization also uses a Unity Catalog-enabled Databricks workspace. You must securely share Unity Catalog-managed Delta tables and the notebook files containing the SQL/Python source code that produces those tables. The partner does not need your Lakeflow Job definitions, schedules, compute settings, or run permissions. Which approach supports this?";
+  q.options=[
+    {key:"A",text:"Email a ZIP of the data and notebooks and grant direct access to your cloud data lake."},
+    {key:"B",text:"Share the tables and notebook files using OpenSharing (formerly Delta Sharing) and manage the shares and recipients with Unity Catalog."},
+    {key:"C",text:"Grant Unity Catalog SELECT on your own tables and assume that this automatically publishes the notebooks and data to an external organization."},
+    {key:"D",text:"Share a GitHub repository and expect Git access to share the governed table data automatically."}
+  ];
+  q.answerWhy="OpenSharing admite compartir tablas y archivos de notebooks con recipients. Las definiciones ejecutables, programación y credenciales de los Jobs no se publican por compartir un notebook; esos recursos requieren un despliegue o permisos propios.";
+  q.wrongWhy={
+    A:"Correo y acceso directo al storage no ofrecen el mecanismo de distribución gobernada de OpenSharing.",
+    C:"Los grants de UC en tu propio metastore no publican automáticamente notebooks y tablas como recursos compartidos entre organizaciones.",
+    D:"Git versiona notebooks y código, pero no crea shares de tablas gobernados mediante Unity Catalog."
+  };
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · OpenSharing assets",url:"https://docs.databricks.com/aws/en/opensharing/create-share"}];
+},
+201(q){
+  q.question="A data engineer needs SQL exploratory analysis over a database reachable only inside the company's customer-managed cloud network. Custom networking is required and private connectivity from Databricks Serverless to that database has not been configured. Which SQL Warehouse type is most appropriate?";
+  q.answerWhy="Pro SQL Warehouse se ejecuta en el entorno cloud del cliente y se recomienda cuando hay redes personalizadas y conectividad de tipo federado/híbrido. Serverless ofrece mejor arranque y escalado para exploración general cuando su conectividad y límites sí cumplen los requisitos.";
+  q.wrongWhy={
+    A:"Classic proporciona funciones SQL básicas pero no Predictive IO; Pro es más adecuado para la combinación de red personalizada y rendimiento.",
+    B:"Serverless es la recomendación general, pero el escenario excluye la conectividad privada necesaria para llegar al origen.",
+    D:"All-purpose es un recurso de notebooks, no un SQL Warehouse para ejecutar estas consultas SQL."
+  };
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · SQL warehouse types",url:"https://docs.databricks.com/aws/en/compute/sql-warehouse/warehouse-types"}];
+},
+257(q){
+  q.question="A Unity Catalog external Delta table is converted to a managed table using ALTER TABLE catalog.schema.table_name SET MANAGED. A Structured Streaming job reading the table was running during conversion and stops after the conversion. How should the engineer restore processing while preserving progress?";
+  q.answerWhy="Databricks indica reiniciar las lecturas/escrituras streaming tras SET MANAGED con la misma configuración y checkpoint. La redirección de lecturas basadas en ruta requiere runtimes compatibles; conviene migrar las lecturas a nombres de tabla cuando corresponda.";
+  q.wrongWhy={
+    A:"El error de conversión no se resuelve normalmente concediendo acceso directo al nuevo almacenamiento gestionado: Unity Catalog gobierna el acceso.",
+    C:"REFRESH TABLE invalida cachés de metadatos y datos, pero no reinicia el stream ni reescribe su checkpoint.",
+    D:"Eliminar el checkpoint pierde el seguimiento incremental y puede provocar reprocesos; Databricks pide reiniciar conservando la configuración."
+  };
+  q.issue=null;
+  q.sourceLinks=[{label:"Databricks · Convert to managed",url:"https://docs.databricks.com/aws/en/tables/convert-to-managed"}];
+},
+
 13(q){
  q.question="In a Unity Catalog-enabled Databricks workspace, the schema main.customer360 has a managed storage location. Which SQL statement shows extended schema metadata, including its location?";
  q.options=[{key:"A",text:"DESCRIBE LOCATION main.customer360;"},{key:"B",text:"DROP SCHEMA main.customer360;"},{key:"C",text:"DESCRIBE SCHEMA EXTENDED main.customer360;"},{key:"D",text:"ALTER SCHEMA main.customer360 SET DBPROPERTIES ('location' = '/user');"},{key:"E",text:"USE SCHEMA main.customer360;"}];
