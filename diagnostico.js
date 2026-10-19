@@ -17,7 +17,7 @@ const DIAG_GROUPS=[
  contrast:"Delta Lake es tecnología de tabla, no Delta Live Tables/Lakeflow. Time Travel consulta versiones; VACUUM elimina archivos antiguos y puede limitar la consulta histórica.",
  exam:"Si se menciona fiabilidad de escrituras: ACID. Si se mencionan VERSION AS OF o TIMESTAMP AS OF: Time Travel. Si se mencionan archivos físicos: Parquet + _delta_log.",
  example:"SELECT * FROM tabla VERSION AS OF 4 consulta una versión retenida sin restaurarla como versión actual."},
- {id:"deltamerge",name:"MERGE, tablas administradas y mantenimiento Delta",area:"Delta Lake",ids:[16,20,24,51,58,64,104,107,155,170,187,188,211,219,233,251,265],
+ {id:"deltamerge",name:"MERGE, tablas administradas y mantenimiento Delta",area:"Delta Lake",ids:[16,20,24,51,58,64,104,107,155,170,187,188,211,219,233,251,257],
  why:"MERGE compara origen y destino por una condición y ejecuta acciones MATCHED/NOT MATCHED. OPTIMIZE reordena/compacta archivos; VACUUM borra archivos obsoletos. Las tablas managed y external difieren en quién gestiona el ciclo de vida de los datos.",
  contrast:"INSERT/APPEND agrega, MERGE permite actualizar e insertar; OPTIMIZE ≠ VACUUM; Liquid Clustering organiza datos por claves y no es un simple ZORDER manual.",
  exam:"Problemas de upsert → MERGE. Muchos ficheros pequeños → OPTIMIZE. Borrado de archivos históricos → VACUUM. Layout moderno → Liquid Clustering / Predictive Optimization.",
@@ -42,7 +42,7 @@ const DIAG_GROUPS=[
  contrast:"No es obligatorio que Silver tenga menos filas que Bronze: explotar arrays o normalizar puede aumentarlas. Gold no significa necesariamente tablas grandes; su objetivo es el consumo empresarial.",
  exam:"Fuente raw → Bronze. Limpieza y conformidad → Silver. KPIs por región o modelos de negocio → Gold.",
  example:"Bronze.events_raw → Silver.events_clean → Gold.daily_sales_by_region."},
- {id:"declarative",name:"Lakeflow SDP, DLT y tipos de tabla",area:"Lakeflow / Medallion",ids:[33,34,36,65,72,121,138,146,160,213],
+ {id:"declarative",name:"Lakeflow SDP, DLT y tipos de tabla",area:"Lakeflow / Medallion",ids:[33,34,36,42,65,72,121,146,160,213],
  why:"Spark Declarative Pipelines define datasets y transformaciones en SQL/Python; la plataforma determina dependencias. Streaming Table procesa incrementos y Materialized View materializa una consulta y se refresca según cambios disponibles.",
  contrast:"DLT es el nombre anterior de esta tecnología; Spark Declarative Pipelines NO es el orquestador Lakeflow Jobs. Una Streaming Table puede ejecutarse en un pipeline Triggered o Continuous.",
  exam:"Si define tablas y flujos declarativos → SDP. Si pregunta cuándo se ejecutan notebooks/tareas → Jobs. Streaming Table ≠ Continuous.",
@@ -52,7 +52,7 @@ const DIAG_GROUPS=[
  contrast:"DROP ROW no crea automáticamente una tabla de cuarentena. FAIL UPDATE no significa descartar solamente una fila. SQL no compara correctamente NULL con != NULL: utiliza IS NOT NULL.",
  exam:"«Registrar sin bloquear» → WARN; «descartar inválidos» → DROP ROW; «fallar el update» → FAIL UPDATE.",
  example:"CONSTRAINT valid_id EXPECT (id IS NOT NULL) ON VIOLATION FAIL UPDATE"},
- {id:"jobs",name:"Lakeflow Jobs, dependencias y reintentos",area:"Jobs / DevOps",ids:[27,37,41,55,84,87,129,131,135,172,218,223,239,252,253,261,264,274,276],
+ {id:"jobs",name:"Lakeflow Jobs, dependencias y reintentos",area:"Jobs / DevOps",ids:[27,37,41,55,84,87,129,131,135,172,218,223,239,241,252,253,261,264,274,276],
  why:"Un Job orquesta tareas y programa ejecuciones. Si B depende de A, A debe terminar antes; Run if controla condiciones de éxito/fallo. Repair run permite reejecutar selectivamente tareas fallidas u omitidas en un run cuando procede.",
  contrast:"Depends on define precedencia; Run if define condición de ejecución; Job Cluster aporta compute; SDP define datasets, no el horario del Job.",
  exam:"Si una corrección debe ejecutarse antes del notebook original, configura el original para depender de la tarea correctiva. No inviertas las flechas del DAG.",
@@ -62,17 +62,17 @@ const DIAG_GROUPS=[
  contrast:"Git folders permite versionar código; un bundle versiona también recursos de despliegue. Continuous delivery normalmente conserva aprobación manual final; continuous deployment no.",
  exam:"databricks bundle deploy -t stage publica hacia ese target. Las variables --var sobrescriben valores de menor prioridad.",
  example:"targets: production: mode: production; usa variables y workspace diferentes, no solo ramas con nombres diferentes."},
- {id:"compute",name:"Job Clusters, Pools, Spot y Serverless",area:"Compute / Spark",ids:[3,15,49,77,92,148,157,164,166,173,180,191,192,193,207,259,275],
+ {id:"compute",name:"Job Clusters, Pools, Spot y Serverless",area:"Compute / Spark",ids:[3,15,43,49,77,92,148,157,164,166,173,180,191,192,193,207,259,275],
  why:"Job Cluster ejecuta tareas y suele ser efímero; All-Purpose se orienta a desarrollo interactivo. Instance Pool prepara instancias para acelerar arranque de clusters clásicos, pero no ejecuta código. Serverless gestiona el aprovisionamiento. Spot reduce precio de VM pero puede interrumpirse.",
  contrast:"Pool ≠ cluster; Spot ≠ autoscaling; Photon optimiza ejecución y no es un descuento de VMs. Un cluster clásico sin pool puede arrancar lento; serverless tiene límites de compatibilidad.",
  exam:"Primero mira si el workload es compatible con Serverless. Si pide explícitamente cluster clásico, distingue arranque (pool), coste (Spot), capacidad (autoscaling) y uso (Jobs frente a interactivo).",
  example:"Un Job batch tolerante a interrupciones puede usar Spot; un SLA estricto quizá requiera On-Demand aunque cueste más."},
- {id:"warehouse",name:"SQL Warehouse: Pro, Serverless y escalado",area:"Compute / Spark",ids:[82,130,153,167,201,220],
+ {id:"warehouse",name:"SQL Warehouse: Pro, Serverless y escalado",area:"Compute / Spark",ids:[40,82,88,130,153,167,201,220],
  why:"SQL Warehouse sirve consultas SQL y BI. Serverless acelera el aprovisionamiento en entornos compatibles; Pro suele elegirse si hace falta networking personalizado en escenarios que no dispone de conexión serverless. Auto Stop apaga compute inactivo; escala máxima atiende concurrencia.",
  contrast:"Warehouse SQL ≠ All-Purpose Spark cluster; Auto Stop ahorra tiempo encendido, no acelera un arranque frío; escalado de clusters concurrentes ≠ tamaño de cluster.",
  exam:"Problema de inicio tras Auto Stop → considera Serverless; muchas consultas en cola → analiza escalado de concurrencia; red personalizada no soportada por serverless → Pro.",
  example:"Bajar el tamaño del SQL Warehouse no evita que esté encendido toda la noche; Auto Stop sí reduce tiempo ocioso."},
- {id:"spark",name:"Spark: shuffle, spill y optimización",area:"Compute / Spark",ids:[2,139,177,178,181,182,237,243,266,267,268,269,272],
+ {id:"spark",name:"Spark: shuffle, spill y optimización",area:"Compute / Spark",ids:[2,139,177,178,181,182,224,237,243,266,267,268,269,272],
  why:"Wide transformations como groupBy y algunos joins provocan redistribución (shuffle). Si falta memoria para resultados intermedios, Spark puede escribirlos a disco (spill). Broadcast Join difunde una tabla pequeña y puede evitar un shuffle de la grande.",
  contrast:"Shuffle = movimiento de datos; spill = memoria insuficiente y escrituras temporales. Skew = distribución desigual de claves; aumentar memoria no lo arregla necesariamente.",
  exam:"Si ves stages muy descompensados → skew. Join con una tabla pequeña → broadcast. df.toPandas() lleva datos al driver, con riesgo de OOM.",
@@ -92,7 +92,7 @@ const DIAG_GROUPS=[
  contrast:"Share no despliega Jobs ni notebooks como tareas; git no comparte tablas gobernadas. Compartir entre regiones o nubes puede generar egress; no presupongas que es gratuito.",
  exam:"«Acceso a un dataset desde una organización externa» → sharing; «consultar BD en origen sin copiar» → federation; «de dónde proviene la columna» → lineage.",
  example:"SELECT sobre una vista UC interna no concede automáticamente lectura a un destinatario fuera del metastore."},
- {id:"quality",name:"Pruebas, monitorización y troubleshooting",area:"Jobs / DevOps",ids:[136,40,88,243],
+ {id:"quality",name:"Pruebas, monitorización y troubleshooting",area:"Jobs / DevOps",ids:[136,243],
  why:"Unit tests verifican funciones aisladas, integración verifica el intercambio entre componentes y system/end-to-end comprueba el flujo completo. Los logs, event logs y Spark UI permiten diagnosticar fallos de datos y rendimiento.",
  contrast:"Un test de una función no detecta necesariamente un join Bronze → Silver que pierde filas. Un notebook sin errores no implica que el pipeline entero conserve integridad referencial.",
  exam:"«join que pierde registros entre capas» → integration test; «assertDataFrameEqual de una función» → unit test.",
@@ -123,6 +123,8 @@ function diagPoints(scope){
      const h=app.history?.[q.id];tries=Math.max(0,Number(h?.attempts)||0);
      wrong=Math.max(0,Math.min(tries,Number(h?.wrong)||0));correct=tries-wrong;
      if(!tries)continue;
+     const past=(app.answerEvents||[]).filter(x=>x.id===q.id);
+     if(past.length)selected=past[past.length-1].selected;
    }
    items.push({q,tries,wrong,correct,selected,concept:diagConcept(q)});
  }
@@ -178,7 +180,7 @@ function diagRender(parent){
  const annotation=diagAdd("p","diag-method",
  data.scope==="session"?
  "Última sesión: una respuesta por pregunta, usando el resultado y las opciones que marcaste. Los fallos de diferentes conceptos no se suman dos veces.":
- "Histórico: se cuentan todos los intentos registrados por pregunta vigente. Las respuestas anteriores no contienen la alternativa elegida; los conceptos se asignan según la temática principal de cada pregunta.");
+ "Histórico: se cuentan todos los intentos por pregunta vigente. La opción seleccionada solo está disponible en la última sesión o en intentos registrados desde esta versión. Los conceptos se asignan por la temática de cada pregunta.");
  root.append(annotation);
  const areaPanel=diagAdd("section","panel padded diag-area-panel");
  areaPanel.append(diagAdd("h2","minititle","1. ¿En qué materias fallas más?"));
