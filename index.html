@@ -250,8 +250,70 @@ function $(sel){return document.querySelector(sel)}
 function el(t,cl,txt){const n=document.createElement(t);if(cl)n.className=cl;if(txt!==undefined)n.textContent=txt;return n}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function btn(label,fn,cls='btn',extra={}){let b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);if(extra.disabled)b.disabled=true;if(extra.title)b.title=extra.title;return b}
-function renderRich(s){let wrap=el('div','source-text');let blocks=(s||'').trim().split(/\n\s*\n/g).filter(Boolean);for(const raw of blocks){const lines=raw.split('\n'), text=raw.trim();const hasTabular=lines.filter(l=>/(?:\S\s{3,}\S)/.test(l)).length>=2 || (lines.length===1&&/\S\s{3,}\S/.test(text));const codeSigns=/^\s*(SELECT|FROM|WHERE|CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|MERGE|WITH|GRANT|def |import |@dlt|@dp|spark\.|df\.|\(|\.write|\.read|\.[a-zA-Z]+\(|resources:|targets:|variables:|bundle:|trigger\(|CONSTRAINT|RETURN|WHEN |AS |\w+\s+STRUCT<)/im;const code=(hasTabular||codeSigns.test(text)&&lines.length>1 || (lines.length===1&&/^\s*(SELECT |CREATE |ALTER |INSERT |UPDATE |DELETE |MERGE |GRANT |def |spark\.|df\.|transactions\.|\(spark|databricks bundle)/i.test(text)));
- if(code){let p=el('pre','',text.replace(/^\s{1,4}/gm,''));wrap.append(p)}else{let p=el('p','',text.replace(/\n\s*/g,' ').replace(/\s{3,}/g,' '));wrap.append(p)}}return wrap}
+function richIsCodeLine(line){
+ const t=line.trim();
+ if(!t)return false;
+ if(/^(?:spark\.|df\.|[a-z_]\w*_df\.|@(?:dp|dlt)\.|def\s+\w+\s*\(|from\s+pyspark\s+import\b|import\s+(?:pyspark|dlt)\b|databricks\s+bundle\s+|%sql\b|\.\w+\s*\(|\(\s*spark\.|--\s)/i.test(t))return true;
+ if(/^(?:resources|targets|variables|bundle|jobs|pipelines|tasks|job_clusters|libraries|workspace|spark_version|node_type_id|num_workers)\s*:\s*/.test(t))return true;
+ if(/^(?:SELECT(?:\s+|$)|FROM\s+(?:STREAM\s*\(|[\w.(]+)|WHERE\s+(?:[\w.]+\s*(?:=|<>|<=>|>|<|IS\b|IN\b|LIKE\b)|[\w.]+\s*\()|(?:LEFT\s+|RIGHT\s+|FULL\s+|INNER\s+)?JOIN\s+|GROUP\s+BY\s+|ORDER\s+BY\s+|HAVING\s+|LIMIT\s+\d+|INSERT\s+INTO\s+|DELETE\s+FROM\s+|UPDATE\s+\w+\s+SET\s+|MERGE\s+INTO\s+|ALTER\s+(?:TABLE|SCHEMA)\s+|DROP\s+(?:TABLE|SCHEMA|VIEW)\s+|GRANT\s+(?:ALL\s+PRIVILEGES|USE\s+(?:SCHEMA|CATALOG)|SELECT|MODIFY|MANAGE|OWNERSHIP)\s+|CREATE\s+(?:(?:OR\s+(?:REPLACE|REFRESH))\s+)?(?:TABLE|STREAMING\s+TABLE|MATERIALIZED\s+VIEW|VIEW|FUNCTION)\b|CONSTRAINT\s+\w+\s+EXPECT\b|ON\s+VIOLATION\s+|WITH\s+\w+\s+AS\s*\()/ .test(t)
+ && !/\b(?:should|would|could|because|which|allows|is used|can use|in order to|to allow)\b/i.test(t))return true;
+ if(/^(?:return\s+(?:spark\.|df\.|\w+\s*[-+*/])|(?:CASE|WHEN|THEN|ELSE|END)\b|(?:AND|OR)\s+\w+\s*[=<>]|[)}\]]\s*,?\s*$)/.test(t))return true;
+ return false;
+}
+function renderRich(value){
+ const wrap=el('div','source-text');
+ const input=String(value==null?'':value).replace(/\r\n?/g,'\n').replace(/\u00a0/g,' ');
+ let pending='';
+ function appendInline(p,txt){
+   const parts=txt.split(/(\x60[^\x60\n]+\x60)/g);
+   for(const part of parts){
+     if(!part)continue;
+     if(/^\x60[^\x60\n]+\x60$/.test(part))p.append(el('code','',part.slice(1,-1)));
+     else p.append(document.createTextNode(part));
+   }
+ }
+ function flushProse(){
+   if(!pending)return;
+   const p=el('p','');appendInline(p,pending);wrap.append(p);pending='';
+ }
+ function addProse(t,hasBreak){
+   t=t.replace(/\s+/g,' ').trim();if(!t)return;
+   const continuation=pending&&!/[.!?;:]\s*$/.test(pending)&&(/^[a-z(]/.test(t)||/\b(?:and|or|but|to|with|of|on|for|from|in|the|a|an)\s*$/i.test(pending));
+   if(hasBreak&&pending&&!continuation)flushProse();
+   pending+=(pending?' ':'')+t;
+ }
+ function addCode(t){flushProse();wrap.append(el('pre','',t.replace(/^\n+|\n+$/g,'').replace(/\t/g,'    ')))}
+ const pieces=input.split(/(\x60{3}[^\n]*\n[\s\S]*?\x60{3})/g);
+ for(const piece of pieces){
+   if(!piece)continue;
+   if(/^\x60{3}/.test(piece)){addCode(piece.replace(/^\x60{3}[^\n]*\n/,'').replace(/\x60{3}\s*$/,''));continue}
+   const paragraphs=piece.split(/\n[ \t]*\n/g);
+   for(let i=0;i<paragraphs.length;i++){
+     const raw=paragraphs[i];if(!raw.trim())continue;
+     const lines=raw.split('\n');
+     const tabular=lines.filter(t=>/\S[ \t]{3,}\S/.test(t)).length>=2||(lines.length===1&&(lines[0].match(/\S[ \t]{3,}\S/g)||[]).length>=2);
+     if(tabular){addCode(raw.trim());continue}
+     let mode='',buffer='';
+     function flush(){
+       if(!buffer)return;
+       if(mode==='code')addCode(buffer);
+       else addProse(buffer,i>0);
+       buffer='';mode='';
+     }
+     for(const line of lines){
+       if(!line.trim()){flush();continue}
+       let isCode=richIsCodeLine(line);
+       if(!isCode&&mode==='code'&&/^\s{2,}\S/.test(line)&&!/\b(?:should|would|because|which)\b/i.test(line))isCode=true;
+       const next=isCode?'code':'prose';
+       if(mode&&mode!==next)flush();
+       mode=next;buffer+=(buffer?'\n':'')+line;
+     }
+     flush();
+   }
+ }
+ flushProse();
+ return wrap;
+}
 function heading(title,subtitle,tag='CAMPUS DE CERTIFICACIÓN'){const box=el('div','');box.append(el('div','eyebrow',tag),el('h1','page-title',title),el('p','subtitle',subtitle));return box}
 function makePanel(cls='padded'){return el('section','panel '+cls)}
 function current(){let s=app.session;return s&&BY_ID.get(s.ids[s.pos])}
